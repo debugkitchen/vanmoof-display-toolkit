@@ -25,7 +25,7 @@ own content — or replays all 54 original VanMoof graphics.
    | SDA | GPIO4 |
    | SCL | GPIO3 |
    | SDB | GPIO2 |
-   | 5V  | 5V (external, ≥1 A) |
+   | 5V  | 5V  |
    | 3V3 | 3V3 |
    | GND | GND |
 
