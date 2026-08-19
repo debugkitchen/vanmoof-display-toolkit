@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SX3 Gallery Naming Tool</title>
+<style>
+  :root {
+    --bg:       #0d1117;
+    --bg-elev:  #161b22;
+    --bg-elev2: #21262d;
+    --border:   #30363d;
+    --border-h: #484f58;
+    --fg:       #e6edf3;
+    --fg-dim:   #8b949e;
+    --accent:   #58a6ff;
+    --good:     #3fb950;
+    --warn:     #d29922;
+    --danger:   #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  header {
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  header .sub { color: var(--fg-dim); font-size: 13px; font-weight: 400; }
+  .spacer { flex: 1; }
+  button {
+    background: var(--bg-elev2);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--border-h); }
+  button.primary { background: #1f6feb; border-color: #1f6feb; }
+  button.primary:hover { background: #388bfd; }
+  button.warn { color: var(--warn); border-color: #5c4a22; }
+  #progress {
+    font-family: ui-monospace, monospace;
+    color: var(--fg-dim);
+    font-size: 13px;
+  }
+  #progress .done { color: var(--good); }
+
+  .grid {
+    max-width: 1100px;
+    margin: 24px auto;
+    padding: 0 20px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 22px;
+    align-items: center;
+  }
+  .card.done { border-color: #1a4d2e; background: #0e1f15; }
+
+  .preview-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  /* The display preview: real 20x9 grid with proper LED glow */
+  .preview {
+    display: grid;
+    grid-template-columns: repeat(9, 14px);
+    grid-template-rows: repeat(20, 14px);
+    gap: 2px;
+    background: #07090c;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  .pdot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #11161e;
+  }
+  .pdot.absent { background: #0c1015; opacity: 0.5; }
+
+  .meta {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-align: center;
+  }
+  .meta .index {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .controls {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .field {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .field label {
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .field input {
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .field input.identifier {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--fg-dim);
+  }
+  .hint b { color: var(--fg); }
+
+  #exportModal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 20;
+  }
+  #exportModal.show { display: flex; }
+  #exportModal .modal {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    max-width: 900px;
+    width: 90%;
+    max-height: 84vh;
+    overflow: auto;
+  }
+  #exportModal h3 { margin: 0 0 12px; }
+  #exportModal textarea {
+    width: 100%;
+    height: 50vh;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    padding: 10px;
+    resize: vertical;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%);
+    background: var(--bg-elev);
+    border: 1px solid var(--good);
+    padding: 10px 16px; border-radius: 8px;
+    color: var(--good);
+    opacity: 0; transition: opacity 200ms;
+    pointer-events: none;
+    z-index: 30;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SX3 Gallery Naming Tool</h1>
+  <span class="sub">For each image, set the display name and identifier.</span>
+  <span class="spacer"></span>
+  <span id="progress">0 / 54 named</span>
+  <button id="btn-clear" class="warn" title="Clear all names (and localStorage)">Clear all</button>
+  <button id="btn-export" class="primary">Export…</button>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div id="exportModal">
+  <div class="modal">
+    <h3>Export naming data</h3>
+    <p style="color: var(--fg-dim); font-size: 13px; margin: 0 0 12px;">
+      Copy this JSON and send it back. The tool will use it to regenerate
+      <code>firmware_gallery.js</code> and <code>firmware_gallery.json</code>
+      with clean names.
+    </p>
+    <textarea id="exportTA" readonly></textarea>
+    <div style="display: flex; gap: 8px; margin-top: 12px;">
+      <button onclick="document.getElementById('exportModal').classList.remove('show')">Close</button>
+      <span class="spacer" style="flex:1"></span>
+      <button id="btn-copy" class="primary">Copy to clipboard</button>
+      <button id="btn-download">Download as .json</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="gallery/firmware_gallery.js"></script>
+<script>
+const STORAGE_KEY = 'sx3-gallery-naming-v1';
+const ROWS = 20, COLS = 9;
+
+// Physically absent LEDs (matches the editor)
+const ABSENT = new Set();
+[0,1,2,6,7,8].forEach(c => ABSENT.add(0*9 + c));
+[1,2].forEach(r => { ABSENT.add(r*9 + 0); ABSENT.add(r*9 + 8); });
+
+const grid = document.getElementById('grid');
+const progress = document.getElementById('progress');
+const toastEl = document.getElementById('toast');
+
+// Load existing naming data from localStorage
+function loadNames() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveNames(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+let names = loadNames();
+
+// Convert hex string to Uint8Array
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i*2, 2), 16);
+  return out;
+}
+
+function intensityToCss(i) {
+  if (i <= 0) return null;
+  const a = 0.18 + (i / 7) * 0.78;
+  return `rgba(240, 181, 66, ${a.toFixed(3)})`;
+}
+function intensityToShadow(i) {
+  if (i <= 0) return 'none';
+  const blur = 2 + i * 1.2;
+  return `0 0 ${blur}px rgba(240, 181, 66, ${(0.18 + i*0.06).toFixed(2)})`;
+}
+
+// Render frame `f` of `bytes` into the dots of `previewEl`.
+function renderFrameTo(previewEl, bytes, frameIdx) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const start_row    = dv.getUint32(0, true);
+  const graphic_rows = dv.getUint32(4, true);
+  const num_frames   = dv.getUint32(8, true);
+  if (frameIdx >= num_frames) frameIdx = 0;
+
+  // Reset all dots
+  const dots = previewEl.children;
+  for (let i = 0; i < dots.length; i++) {
+    const isAbsent = dots[i].classList.contains('absent');
+    dots[i].style.background = isAbsent ? '#0c1015' : '#11161e';
+    dots[i].style.boxShadow = 'none';
+  }
+  for (let rel = 0; rel < graphic_rows; rel++) {
+    const wordIdx = num_frames * rel + frameIdx + num_frames + 3;
+    if (wordIdx * 4 + 4 > bytes.length) break;
+    const word = dv.getUint32(wordIdx * 4, true);
+    const absRow = start_row + rel;
+    if (absRow >= ROWS) continue;
+    for (let c = 0; c < COLS; c++) {
+      const inten = (word >>> (24 - 3*c)) & 0x7;
+      if (inten === 0) continue;
+      const idx = absRow * COLS + c;
+      const dot = dots[idx];
+      const colour = intensityToCss(inten);
+      if (colour) {
+        dot.style.background = colour;
+        dot.style.boxShadow = intensityToShadow(inten);
+      }
+    }
+  }
+}
+
+// Slug-ify a display name into an identifier:
+//   "VanMoof Startup Animation" -> "vanmoof_startup_animation"
+function slugify(s) {
+  return s
+    .toLowerCase()
+    .replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue').replace(/[ß]/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function updateProgress() {
+  const total = SX3_FIRMWARE_GALLERY.length;
+  let named = 0;
+  for (let i = 0; i < total; i++) {
+    if (names[i] && names[i].display && names[i].display.trim()) named++;
+  }
+  progress.innerHTML = `<span class="${named === total ? 'done' : ''}">${named} / ${total} named</span>`;
+}
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+// Build the cards
+SX3_FIRMWARE_GALLERY.forEach((img, idx) => {
+  const bytes = hexToBytes(img.hex);
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const previewWrap = document.createElement('div');
+  previewWrap.className = 'preview-wrap';
+
+  const preview = document.createElement('div');
+  preview.className = 'preview';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const d = document.createElement('div');
+      d.className = 'pdot' + (ABSENT.has(r*9+c) ? ' absent' : '');
+      preview.appendChild(d);
+    }
+  }
+  previewWrap.appendChild(preview);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.innerHTML =
+    `<span class="index">#${idx}</span>` +
+    `${img.addr}<br>` +
+    `start=${img.start_row} rows=${img.graphic_rows}<br>` +
+    `<b>${img.num_frames}</b> frame${img.num_frames > 1 ? 's' : ''}<br>` +
+    `${img.size} bytes`;
+  previewWrap.appendChild(meta);
+
+  card.appendChild(previewWrap);
+
+  // Controls
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+
+  const existing = names[idx] || {};
+
+  const f1 = document.createElement('div');
+  f1.className = 'field';
+  f1.innerHTML = `<label>Display name</label>`;
+  const inDisplay = document.createElement('input');
+  inDisplay.type = 'text';
+  inDisplay.placeholder = 'e.g. "VanMoof Startup Animation"';
+  inDisplay.value = existing.display || '';
+  f1.appendChild(inDisplay);
+  controls.appendChild(f1);
+
+  const f2 = document.createElement('div');
+  f2.className = 'field';
+  f2.innerHTML = `<label>Identifier <span class="hint">(auto-suggested · ascii_snake_case)</span></label>`;
+  const inIdent = document.createElement('input');
+  inIdent.type = 'text';
+  inIdent.className = 'identifier';
+  inIdent.placeholder = 'e.g. vanmoof_startup_animation';
+  inIdent.value = existing.identifier || '';
+  f2.appendChild(inIdent);
+  controls.appendChild(f2);
+
+  // Old guessed name for reference
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.innerHTML = `Previously guessed: <b>${img.name || '(none)'}</b>` +
+                   (img.description ? ` — ${img.description}` : '');
+  controls.appendChild(hint);
+
+  card.appendChild(controls);
+  grid.appendChild(card);
+
+  // Update visual state if already named
+  function refreshCardDone() {
+    card.classList.toggle('done', !!(inDisplay.value.trim()));
+  }
+  refreshCardDone();
+
+  // Wire up: auto-slug identifier from display name (only if identifier is
+  // empty or was a slug of the previous display name).
+  let lastSlugged = slugify(inDisplay.value);
+  inDisplay.addEventListener('input', () => {
+    const trimmed = inDisplay.value.trim();
+    if (!inIdent.value || inIdent.value === lastSlugged) {
+      const s = slugify(trimmed);
+      inIdent.value = s;
+      lastSlugged = s;
+    }
+    names[idx] = { display: inDisplay.value, identifier: inIdent.value };
+    saveNames(names);
+    updateProgress();
+    refreshCardDone();
+  });
+  inIdent.addEventListener('input', () => {
+    names[idx] = { display: inDisplay.value, identifier: inIdent.value };
+    saveNames(names);
+  });
+
+  // Animate the preview if multi-frame
+  if (img.num_frames > 1) {
+    let frame = 0;
+    let lastSwitch = performance.now();
+    function tick() {
+      const now = performance.now();
+      if (now - lastSwitch >= 150) {  // 150ms per frame in the naming tool
+        frame = (frame + 1) % img.num_frames;
+        lastSwitch = now;
+        renderFrameTo(preview, bytes, frame);
+      }
+      requestAnimationFrame(tick);
+    }
+    renderFrameTo(preview, bytes, 0);
+    requestAnimationFrame(tick);
+  } else {
+    renderFrameTo(preview, bytes, 0);
+  }
+});
+
+updateProgress();
+
+// Export button
+document.getElementById('btn-export').addEventListener('click', () => {
+  // Build the export structure
+  const out = SX3_FIRMWARE_GALLERY.map((img, idx) => {
+    const n = names[idx] || {};
+    return {
+      idx,
+      addr: img.addr,
+      display: (n.display || '').trim(),
+      identifier: (n.identifier || '').trim(),
+    };
+  });
+  const text = JSON.stringify(out, null, 2);
+  document.getElementById('exportTA').value = text;
+  document.getElementById('exportModal').classList.add('show');
+});
+
+document.getElementById('btn-copy').addEventListener('click', () => {
+  const ta = document.getElementById('exportTA');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => toast('Copied to clipboard'));
+});
+document.getElementById('btn-download').addEventListener('click', () => {
+  const text = document.getElementById('exportTA').value;
+  const blob = new Blob([text], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gallery_names.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (!confirm('Really clear all names? This cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+});
+</script>
+</body>
+</html>

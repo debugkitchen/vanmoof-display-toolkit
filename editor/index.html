@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SX3 Display Editor</title>
+<style>
+  :root {
+    --bg:         #0d1117;
+    --bg-elev:    #161b22;
+    --bg-elev2:   #21262d;
+    --border:     #30363d;
+    --border-h:   #484f58;
+    --fg:         #e6edf3;
+    --fg-dim:     #8b949e;
+    --fg-dimmer:  #6e7681;
+    --accent:     #58a6ff;
+    --accent-2:   #79c0ff;
+    --good:       #3fb950;
+    --warn:       #d29922;
+    --danger:     #f85149;
+    --purple:     #d2a8ff;
+    --amber:      #f0b542;
+    --selected:   #1f6feb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+  }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ---------- top bar ---------- */
+  header {
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    margin: 0; font-size: 16px; font-weight: 600;
+    color: var(--fg);
+  }
+  header .sub { color: var(--fg-dim); font-size: 12px; font-weight: 400; }
+  header .spacer { flex: 1; }
+
+  button, .btn, select, input[type=number], input[type=text] {
+    background: var(--bg-elev2);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 80ms, border-color 80ms;
+  }
+  button:hover, .btn:hover { background: #2d333b; border-color: var(--border-h); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--selected); border-color: var(--selected); }
+  button.primary:hover { background: #388bfd; }
+  button.danger { color: var(--danger); border-color: #5c2027; }
+  button.danger:hover { background: #5c2027; }
+  input[type=number], input[type=text] { padding: 5px 8px; }
+  input[type=number] { width: 70px; }
+  label { color: var(--fg-dim); font-size: 12px; }
+  kbd {
+    background: var(--bg-elev2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--fg-dim);
+  }
+
+  /* ---------- main layout ---------- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    gap: 0;
+    min-height: 0;
+  }
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  }
+
+  .panel {
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    padding: 14px;
+    overflow-y: auto;
+  }
+  .panel:last-child { border-right: 0; border-left: 1px solid var(--border); }
+  .panel h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-dim);
+    margin: 4px 0 10px;
+    font-weight: 600;
+  }
+  .panel h2:not(:first-child) { margin-top: 22px; }
+
+  /* ---------- canvas area ---------- */
+  .canvas-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px;
+    overflow: auto;
+    background:
+      radial-gradient(ellipse at center, #161b22 0%, var(--bg) 70%);
+  }
+  .panel-preview-wrap {
+    display: flex; align-items: center; justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  /* edit grid: large clickable cells */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(9, 44px);
+    grid-template-rows: repeat(20, 44px);
+    gap: 3px;
+    padding: 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    user-select: none;
+  }
+  .cell {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid #21262d;
+    cursor: pointer;
+    transition: transform 60ms;
+    position: relative;
+  }
+  .cell:hover { transform: scale(1.06); border-color: var(--border-h); }
+  .cell.absent {
+    border-style: dashed;
+    border-color: #2a1f1f;
+    opacity: 0.55;
+  }
+  /* tiny brightness label */
+  .cell .lbl {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: rgba(255,255,255,0.55);
+    pointer-events: none;
+    font-family: ui-monospace, monospace;
+  }
+  .cell.lit .lbl { color: rgba(0,0,0,0.55); }
+
+  /* mini panel preview (live, glowing) */
+  .preview {
+    display: grid;
+    grid-template-columns: repeat(9, 16px);
+    grid-template-rows: repeat(20, 16px);
+    gap: 2px;
+    padding: 12px;
+    background: #07090c;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .pdot { width: 16px; height: 16px; border-radius: 50%; background: #11161e; }
+  .pdot.absent { background: #0c1015; opacity: 0.5; }
+
+  /* ---------- frame strip ---------- */
+  .frame-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
+  /* On the wide (grid) layout, keep the Frames controls and the duration block
+     pinned while only the frame list scrolls. */
+  @media (min-width: 1101px) {
+    #frames-panel { display: flex; flex-direction: column; overflow: hidden; }
+    #frames-panel > * { flex: 0 0 auto; }
+    #frames-panel #frame-list { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+  }
+  .frame-item {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    transition: border-color 80ms;
+  }
+  .frame-item:hover { border-color: var(--border-h); }
+  .frame-item.selected { border-color: var(--accent); background: #0e2a4a; }
+  .frame-item.marked { box-shadow: inset 0 0 0 2px var(--accent); }
+  .frame-check { width: 16px; height: 16px; cursor: pointer; flex: 0 0 auto; accent-color: var(--accent); }
+  .frame-thumb {
+    display: grid;
+    grid-template-columns: repeat(9, 4px);
+    grid-template-rows: repeat(20, 4px);
+    gap: 1px;
+    background: #07090c;
+    padding: 4px;
+    border-radius: 4px;
+  }
+  .tdot { width: 4px; height: 4px; border-radius: 50%; background: #1a1f27; }
+  .frame-meta { font-size: 11px; color: var(--fg-dim); }
+  .frame-meta b { color: var(--fg); display: block; margin-bottom: 2px; font-size: 12px; }
+
+  /* ---------- brightness palette ---------- */
+  .palette { display: flex; gap: 4px; flex-wrap: wrap; }
+  .palette button {
+    width: 36px; height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    position: relative;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+  }
+  .palette button.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,166,255,0.25); }
+
+  /* ---------- toolbar groups ---------- */
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  .seg { display: flex; gap: 0; }
+  .seg button { border-radius: 0; border-right: 0; }
+  .seg button:first-child { border-radius: 6px 0 0 6px; }
+  .seg button:last-child  { border-radius: 0 6px 6px 0; border-right: 1px solid var(--border); }
+
+  /* ---------- io panel textarea ---------- */
+  textarea {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    padding: 8px;
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  /* ---------- toast ---------- */
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--bg-elev); border: 1px solid var(--border);
+    padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 13px; pointer-events: none;
+    opacity: 0; transition: opacity 200ms, transform 200ms;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  #toast.err { border-color: var(--danger); color: var(--danger); }
+
+  /* ---------- modal ---------- */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 720px;
+    width: 90%;
+    max-height: 84vh;
+    overflow: auto;
+    padding: 22px;
+  }
+  .modal h3 { margin: 0 0 14px; font-size: 16px; }
+  .modal .close { float: right; }
+
+  /* ---------- import preview ---------- */
+  .import-preview {
+    display: flex; gap: 18px; align-items: center;
+    background: var(--bg-elev2); border-radius: 8px; padding: 12px;
+    margin: 12px 0;
+  }
+  .import-preview canvas {
+    background: #07090c;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    image-rendering: pixelated;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field label { font-size: 12px; color: var(--fg-dim); }
+  .field input[type=range] { width: 100%; }
+
+  /* drop zone overlay */
+  #dropZone {
+    position: fixed; inset: 0; background: rgba(31, 111, 235, 0.15);
+    border: 3px dashed var(--accent); display: none;
+    align-items: center; justify-content: center;
+    pointer-events: none; z-index: 200;
+    font-size: 22px; color: var(--accent);
+  }
+  #dropZone.show { display: flex; }
+
+  /* small */
+  .muted { color: var(--fg-dim); }
+  .small { font-size: 11px; }
+  .mono { font-family: ui-monospace, monospace; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+  details summary { cursor: pointer; padding: 4px 0; color: var(--fg-dim); }
+  details[open] summary { color: var(--fg); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SX3 Display Editor <span class="sub">— 20×9 · 8 brightness levels · frame-interleaved animations</span></h1>
+  <span class="spacer"></span>
+  <button id="btn-help" title="Help / keyboard shortcuts">?</button>
+  <button id="btn-new"   class="danger" title="New empty project">New</button>
+  <button id="btn-import" title="Import .hex or paste data">Import…</button>
+  <button id="btn-export" class="primary" title="Export hex / C array">Export…</button>
+  <button id="btn-pngimport" title="Import a PNG / GIF">PNG/GIF…</button>
+  <button id="btn-gallery"   title="Browse VanMoof firmware images and load them">Gallery…</button>
+  <button id="btn-text" title="Generate a scrolling-text animation">Text…</button>
+  <button id="btn-number" title="Generate a centred number (speed / level / %)">Number…</button>
+  <button id="btn-battery" title="Generate the battery frame filled to a charge level">Battery…</button>
+  <button id="btn-ble"  title="Send current animation to the SX3 display via Bluetooth">Send via BLE…</button>
+</header>
+
+<main>
+  <!-- LEFT PANEL: frame strip + animation controls -->
+  <aside class="panel" id="frames-panel">
+    <h2>Frames</h2>
+    <div class="row">
+      <button id="btn-frame-add">+ Add</button>
+      <button id="btn-frame-dup">Duplicate</button>
+      <button id="btn-frame-del" class="danger">Delete</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btn-frame-up"   title="Move frame up">↑</button>
+      <button id="btn-frame-down" title="Move frame down">↓</button>
+      <button id="btn-frame-reverse" title="Reverse the order of all frames">⇅ Reverse</button>
+      <span class="spacer"></span>
+      <button id="btn-play" class="primary" title="Play / pause preview">▶ Play</button>
+    </div>
+    <div id="frame-list" class="frame-list"></div>
+
+    <h2>Frame duration</h2>
+    <div class="row">
+      <input type="number" id="dur-input" min="10" max="60000" step="10" value="50">
+      <span class="muted small">ms</span>
+      <button id="btn-dur-all" title="Apply this duration to all frames">All</button>
+      <button id="btn-dur-sel" title="Apply this duration to the checked frames">Selected</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button id="btn-sel-all" title="Check all frames">Select all</button>
+      <button id="btn-sel-none" title="Uncheck all frames">Clear</button>
+      <span class="spacer"></span>
+      <span class="muted small" id="sel-count">0 selected</span>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="muted small">Range</span>
+      <input type="number" id="sel-from" min="1" placeholder="from" style="width:60px">
+      <span class="muted small">–</span>
+      <input type="number" id="sel-to" min="1" placeholder="to" style="width:60px">
+      <button id="btn-sel-range" title="Check frames in this range (1-based; adds to the current selection)">Select</button>
+    </div>
+  </aside>
+
+  <!-- CENTER: canvas + live preview -->
+  <section class="canvas-wrap">
+    <div class="panel-preview-wrap">
+      <div>
+        <div class="muted small" style="margin-bottom:6px">Edit (click cells, drag to paint)</div>
+        <div id="grid" class="grid"></div>
+      </div>
+      <div>
+        <div class="muted small" style="margin-bottom:6px">Live preview</div>
+        <div id="preview" class="preview"></div>
+        <div id="preview-meta" class="muted small mono" style="margin-top:8px; text-align:center"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT PANEL: tools -->
+  <aside class="panel">
+    <h2>Brightness</h2>
+    <div id="palette" class="palette"></div>
+    <div class="muted small" style="margin-top:6px">
+      Click a cell to set it to the active brightness. Right-click clears.
+      Drag to paint multiple cells. <kbd>0</kbd>–<kbd>7</kbd> select.
+    </div>
+
+    <h2>Tools</h2>
+    <div class="row">
+      <button id="btn-clear" title="Clear current frame">Clear frame</button>
+      <button id="btn-fill"  title="Fill frame with active brightness">Fill</button>
+    </div>
+    <div class="row">
+      <button id="btn-invert">Invert</button>
+      <button id="btn-shift-l" title="Shift pixels left">◀</button>
+      <button id="btn-shift-r" title="Shift pixels right">▶</button>
+      <button id="btn-shift-u" title="Shift pixels up">▲</button>
+      <button id="btn-shift-d" title="Shift pixels down">▼</button>
+    </div>
+    <div class="row">
+      <button id="btn-flip-h" title="Flip horizontally">⇆ Flip H</button>
+      <button id="btn-flip-v" title="Flip vertically">⇵ Flip V</button>
+    </div>
+    <div class="row">
+      <button id="btn-copy-frame" title="Copy current frame">Copy frame</button>
+      <button id="btn-paste-frame" title="Paste over current frame">Paste</button>
+    </div>
+
+    <h2>Onion skin</h2>
+    <div class="row">
+      <label><input type="checkbox" id="cb-onion"> Show previous frame</label>
+    </div>
+
+    <h2>Image bounds</h2>
+    <div id="bounds-info" class="muted small mono"></div>
+    <div class="muted small" style="margin-top:6px">
+      Export auto-fits <span class="mono">start_row</span> /
+      <span class="mono">graphic_rows</span> to the used pixels.
+    </div>
+
+    <h2>About</h2>
+    <details>
+      <summary class="small">Format & physical panel notes</summary>
+      <div class="small muted" style="margin-top:6px">
+        20 rows × 9 columns, 3-bit intensity per pixel. The grid shows the
+        physically absent corner LEDs as dashed circles — you can still draw
+        on them, they just won't light up on real hardware. Animations use
+        the frame-interleaved container format described in the
+        <a href="../guide/README.md" style="color:var(--accent)">main
+        guide</a> (section 4).
+      </div>
+    </details>
+  </aside>
+</main>
+
+<!-- Import / export modal -->
+<div id="modal-bg" class="modal-bg">
+  <div class="modal">
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3 id="modal-title">Modal</h3>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="dropZone">Drop a .hex / PNG / GIF anywhere</div>
+
+<script src="gallery/firmware_gallery.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>
