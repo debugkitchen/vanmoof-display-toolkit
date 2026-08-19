@@ -1,6 +1,12 @@
 # Inside the VanMoof SX3 Display: How It Works and How to Drive It Yourself
 
-![A salvaged SX3 panel lit up on the bench, driven over its exposed connector — no bike required.](images/hello.jpg)
+<p align="center">
+  <a href="images/hello.jpg">
+    <img src="images/hello.jpg"
+         alt="A salvaged SX3 panel lit up on the bench, driven over its exposed connector — no bike required."
+         width="800">
+  </a>
+</p>
 
 *A salvaged SX3 panel lit up on the bench, driven over its exposed connector — no bike required.*
 
@@ -128,11 +134,23 @@ The display unit lifts off the smart cartridge after removing a single screw
 and easing it away from the adhesive foam that holds it down. On the back of
 the housing sits the panel's own connector.
 
-![Salvaged SX3 display modules, showing the dot-matrix window and mounting tab shared across housing sizes.](images/cartridge_cover.jpg)
+<p align="center">
+  <a href="images/cartridge_cover.jpg">
+    <img src="images/cartridge_cover.jpg"
+         alt="Salvaged SX3 display modules, showing the dot-matrix window and mounting tab shared across housing sizes."
+         width="600">
+  </a>
+</p>
 
 *Salvaged SX3 display modules — the dot-matrix window and mounting tab are the same across the housing sizes you'll run into.*
 
-![The back of the module: a 2×5, 2.54 mm pin header recessed in the housing, with the mounting tab at the bottom.](images/pins_display.jpg)
+<p align="center">
+  <a href="images/pins_display.jpg">
+    <img src="images/pins_display.jpg"
+         alt="The back of the module: a 2×5, 2.54 mm pin header recessed in the housing, with the mounting tab at the bottom."
+         width="450">
+  </a>
+</p>
 
 *The back of the module: a 2×5, 2.54 mm pin header recessed in the housing, with the mounting tab at the bottom.*
 
@@ -171,7 +189,13 @@ which is worth knowing about.
 
 ### The daughterboard and the FFC
 
-![The protective daughterboard seated on the 2×5 header, breaking the ten pins out to an 8-conductor FFC that normally runs to the cartridge PCB.](images/daughterboard.jpg)
+<p align="center">
+  <a href="images/daughterboard.jpg">
+    <img src="images/daughterboard.jpg"
+         alt="The protective daughterboard seated on the 2×5 header, breaking the ten pins out to an 8-conductor FFC that normally runs to the cartridge PCB."
+         width="500">
+  </a>
+</p>
 
 *The protective daughterboard seated on the 2×5 header, breaking the ten pins out to an 8-conductor FFC that normally runs to the cartridge PCB.*
 
@@ -217,7 +241,13 @@ grab an off-the-shelf breakout. I used the latter — an **"FPC-8P 0.5 mm"**
 adapter that lands the eight FFC conductors on a 2×4, 2.54 mm header you can
 jumper straight to a microcontroller.
 
-![The FPC-8P 0.5 mm breakout: the display's FFC goes into the white ZIF connector, jumper wires come off the 2×4 header on the other side.](images/fpc-to-jumper.jpg)
+<p align="center">
+  <a href="images/fpc-to-jumper.jpg">
+    <img src="images/fpc-to-jumper.jpg"
+         alt="The FPC-8P 0.5 mm breakout: the display's FFC goes into the white ZIF connector, jumper wires come off the 2×4 header on the other side."
+         width="500">
+  </a>
+</p>
 
 *The FPC-8P 0.5 mm breakout: the display's FFC goes into the white ZIF connector, jumper wires come off the 2×4 header on the other side.*
 
@@ -785,7 +815,13 @@ Swap the body of `loop()` for anything you like: scroll text with a font
 table, render the container format from section 4, or overlay a live value.
 The scaffolding above is all the panel ever needs.
 
-![The finished setup: FPC breakout, jumper wires and a salvaged panel lit up from a running sketch.](images/esp32_ble_receiver.jpg)
+<p align="center">
+  <a href="images/esp32_ble_receiver.jpg">
+    <img src="images/esp32_ble_receiver.jpg"
+         alt="The finished setup: FPC breakout, jumper wires and a salvaged panel lit up from a running sketch."
+         width="750">
+  </a>
+</p>
 
 *The finished setup: FPC breakout, jumper wires and a salvaged panel lit up from a running sketch — no bike, no original mainboard.*
 
