@@ -283,13 +283,12 @@ The panel needs both rails: +5 V for the LEDs and +3.3 V for the controllers
 and light sensor. INTB is optional — leave it unconnected unless you want to
 react to LED-fault interrupts.
 
-**Power budget.** At high Global Current with a lot of LEDs lit at once, the
-panel can pull enough current to sag a USB-powered 5 V rail — the usual
-symptom is the ESP32 randomly resetting rather than anything wrong on the
-I²C bus. A supply rated 5 V / >=1 A is enough headroom for full brightness.
-If both the ESP32 and the display are drawing from the same USB port
-(laptop port, cheap hub), give the display its own 5 V supply instead and
-just share ground with the ESP32.
+**Power budget.** The display can normally be powered directly from the 5 V
+rail of an ESP32-C3 board, including at high brightness. Actual available 
+current depends on the board, USB source, cable and any other connected loads.
+If you do encounter instability — for example, the ESP32 resetting when many
+LEDs are lit at high Global Current — try a stronger USB supply or power the
+display from a separate 5 V source while keeping the grounds connected.
 
 ---
 
